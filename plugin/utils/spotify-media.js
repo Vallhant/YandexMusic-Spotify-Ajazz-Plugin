@@ -25,22 +25,13 @@ function spotifyClick(labels, testIds) {
 
 function spotifyNowPlayingButton(labels, testIds) {
     var root = document.querySelector('[data-testid="now-playing-widget"]');
-    var buttons = root ? Array.from(root.querySelectorAll('button')) : [];
-    var allButtons = Array.from(document.querySelectorAll('button'));
-    var combinedButtons = buttons.concat(allButtons.filter(function(b) { return buttons.indexOf(b) === -1; }));
-
-    var byTestId = combinedButtons.find(function(button) {
+    if (!root) return null;
+    var buttons = Array.from(root.querySelectorAll('button'));
+    var byTestId = buttons.find(function(button) {
         return (testIds || []).indexOf(button.getAttribute('data-testid')) !== -1;
     });
     if (byTestId) return byTestId;
-
-    var byTestIdAttr = combinedButtons.find(function(button) {
-        var tid = (button.getAttribute('data-testid') || '').toLowerCase();
-        return (testIds || []).some(function(id) { return tid.indexOf(id.toLowerCase()) !== -1; });
-    });
-    if (byTestIdAttr) return byTestIdAttr;
-
-    return combinedButtons.find(function(button) {
+    return buttons.find(function(button) {
         var label = (button.getAttribute('aria-label') || '').toLowerCase();
         return labels.some(function(expected) { return label.indexOf(expected) !== -1; });
     }) || null;
@@ -289,15 +280,7 @@ class SpotifyMediaController {
             return { success: false, message: 'Кнопка добавления в любимые треки не найдена' };
         })()`).then(value => value?.success || false);
     }
-    dislikeTrack() {
-        return this.evaluate(`(function() {
-            ${SPOTIFY_DOM}
-            return spotifyClickNowPlaying(
-                ['hide this song', 'dislike', 'не нравится', 'скрыть в плейлисте'],
-                ['ban-button', 'dislike-button']
-            );
-        })()`).then(value => value?.success || false);
-    }
+    dislikeTrack() { return this.evaluate(`(function() { ${SPOTIFY_DOM} return spotifyClickNowPlaying(['hide this song', 'dislike', 'не нравится', 'скрыть в плейлисте'], []); })()`).then(value => value?.success || false); }
     toggleShuffle() { return this.click(['shuffle', 'случайный порядок', 'перемешать']); }
     toggleRepeat() { return this.click(['repeat', 'повторять']); }
 }
