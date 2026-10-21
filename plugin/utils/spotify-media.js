@@ -257,7 +257,12 @@ class SpotifyMediaController {
     }
 
     seekRelative(deltaTicks) { return this.evaluate(`(function() { ${SPOTIFY_DOM} var slider = spotifyRange('progress'); if (!slider) return false; return spotifySetRange(slider, Number(slider.value) + ${Number(deltaTicks) * 5000 || 0}); })()`); }
-    likeTrack() { return this.evaluate(`(function() { ${SPOTIFY_DOM} return spotifyClickNowPlaying(['like', 'liked songs', 'нравится', 'добавить в медиатеку', 'добавить в любимые треки'], []); })()`).then(value => value?.success || false); }
+    likeTrack() {
+        return this.evaluate(`(function() {
+            ${SPOTIFY_DOM}
+            return spotifyClickNowPlaying(['like', 'liked songs', 'нравится', 'добавить в медиатеку', 'добавить в любимые треки'], []);
+        })()`).then(value => value?.success || false);
+    }
     dislikeTrack() { return this.evaluate(`(function() { ${SPOTIFY_DOM} return spotifyClickNowPlaying(['hide this song', 'dislike', 'не нравится', 'скрыть в плейлисте'], []); })()`).then(value => value?.success || false); }
     toggleShuffle() { return this.click(['shuffle', 'случайный порядок', 'перемешать']); }
     toggleRepeat() { return this.click(['repeat', 'повторять']); }
