@@ -25,13 +25,22 @@ function spotifyClick(labels, testIds) {
 
 function spotifyNowPlayingButton(labels, testIds) {
     var root = document.querySelector('[data-testid="now-playing-widget"]');
-    if (!root) return null;
-    var buttons = Array.from(root.querySelectorAll('button'));
-    var byTestId = buttons.find(function(button) {
+    var buttons = root ? Array.from(root.querySelectorAll('button')) : [];
+    var allButtons = Array.from(document.querySelectorAll('button'));
+    var combinedButtons = buttons.concat(allButtons.filter(function(b) { return buttons.indexOf(b) === -1; }));
+
+    var byTestId = combinedButtons.find(function(button) {
         return (testIds || []).indexOf(button.getAttribute('data-testid')) !== -1;
     });
     if (byTestId) return byTestId;
-    return buttons.find(function(button) {
+
+    var byTestIdAttr = combinedButtons.find(function(button) {
+        var tid = (button.getAttribute('data-testid') || '').toLowerCase();
+        return (testIds || []).some(function(id) { return tid.indexOf(id.toLowerCase()) !== -1; });
+    });
+    if (byTestIdAttr) return byTestIdAttr;
+
+    return combinedButtons.find(function(button) {
         var label = (button.getAttribute('aria-label') || '').toLowerCase();
         return labels.some(function(expected) { return label.indexOf(expected) !== -1; });
     }) || null;
@@ -257,8 +266,38 @@ class SpotifyMediaController {
     }
 
     seekRelative(deltaTicks) { return this.evaluate(`(function() { ${SPOTIFY_DOM} var slider = spotifyRange('progress'); if (!slider) return false; return spotifySetRange(slider, Number(slider.value) + ${Number(deltaTicks) * 5000 || 0}); })()`); }
-    likeTrack() { return this.evaluate(`(function() { ${SPOTIFY_DOM} return spotifyClickNowPlaying(['like', 'liked songs', 'нравится', 'добавить в медиатеку', 'добавить в любимые треки'], []); })()`).then(value => value?.success || false); }
-    dislikeTrack() { return this.evaluate(`(function() { ${SPOTIFY_DOM} return spotifyClickNowPlaying(['hide this song', 'dislike', 'не нравится', 'скрыть в плейлисте'], []); })()`).then(value => value?.success || false); }
+    likeTrack() {
+        return this.evaluate(`(function() {
+            ${SPOTIFY_DOM}
+            var btn = spotifyNowPlayingButton(
+                ['save to your liked songs', 'remove from your liked songs', 'liked songs', 'like', 'unlike', 'сохранить в любимые треки', 'удалить из любимых треков', 'любимые треки', 'нравится', 'не нравится', 'добавить в медиатеку', 'добавить в любимые треки', 'сохранить в медиатеку', 'удалить из медиатеки'],
+                ['add-to-liked-songs', 'remove-from-liked-songs', 'like-button', 'control-button-like', 'entity-action-like']
+            );
+            if (!btn) {
+                var buttons = Array.from(document.querySelectorAll('button'));
+                btn = buttons.find(function(b) {
+                    var label = (b.getAttribute('aria-label') || '').toLowerCase();
+                    var tid = (b.getAttribute('data-testid') || '').toLowerCase();
+                    return label.indexOf('save') !== -1 || label.indexOf('like') !== -1 || label.indexOf('любим') !== -1 || label.indexOf('нрав') !== -1 ||
+                           tid.indexOf('like') !== -1 || tid.indexOf('save') !== -1;
+                });
+            }
+            if (btn) {
+                btn.click();
+                return { success: true };
+            }
+            return { success: false, message: 'Кнопка добавления в любимые треки не найдена' };
+        })()`).then(value => value?.success || false);
+    }
+    dislikeTrack() {
+        return this.evaluate(`(function() {
+            ${SPOTIFY_DOM}
+            return spotifyClickNowPlaying(
+                ['hide this song', 'dislike', 'не нравится', 'скрыть в плейлисте'],
+                ['ban-button', 'dislike-button']
+            );
+        })()`).then(value => value?.success || false);
+    }
     toggleShuffle() { return this.click(['shuffle', 'случайный порядок', 'перемешать']); }
     toggleRepeat() { return this.click(['repeat', 'повторять']); }
 }
