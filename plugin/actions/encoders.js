@@ -19,6 +19,15 @@ const trackInput = createInputCoalescer(async (_context, ticks, signal) => {
     return true;
 });
 
+function getDialTicks(payload) {
+    const value = Number(payload?.ticks ?? payload?.delta ?? payload?.rotation ?? 0);
+    if (value !== 0) return value;
+    const direction = String(payload?.direction || '').toLowerCase();
+    if (direction === 'down' || direction === 'left' || direction === 'ccw') return -1;
+    if (direction === 'up' || direction === 'right' || direction === 'cw') return 1;
+    return 0;
+}
+
 async function togglePlaybackOnEncoder(context, errorLabel) {
     try {
         const result = await deps.yandexMusic.togglePlayback();
@@ -46,10 +55,6 @@ function createPlaybackEncoderAction(name, dialRotateHandler) {
             log.info(`${name} keyUp:`, context);
             await togglePlaybackOnEncoder(context, `Ошибка при переключении воспроизведения через кнопку энкодера (${name}):`);
         },
-        async dialDown({ context, payload }) {
-            log.info(`${name} dialDown:`, context, JSON.stringify(payload));
-            await togglePlaybackOnEncoder(context, `Ошибка при переключении воспроизведения через энкодер (${name}):`);
-        },
         dialRotate: dialRotateHandler
     };
 }
@@ -57,7 +62,7 @@ function createPlaybackEncoderAction(name, dialRotateHandler) {
 module.exports = function registerEncoderActions(plugin) {
     plugin['ym-seek-encoder'] = new Actions(createPlaybackEncoderAction('YM Seek Encoder', async function ({ context, payload }) {
         log.info('YM Seek Encoder dialRotate:', context, JSON.stringify(payload));
-        const ticks = payload?.ticks || 0;
+        const ticks = getDialTicks(payload);
 
         try {
             const result = await seekInput.add(context, ticks);
@@ -70,7 +75,7 @@ module.exports = function registerEncoderActions(plugin) {
 
     plugin['ym-track-encoder'] = new Actions(createPlaybackEncoderAction('YM Track Encoder', async function ({ context, payload }) {
         log.info('YM Track Encoder dialRotate:', context, JSON.stringify(payload));
-        const ticks = payload?.ticks || 0;
+        const ticks = getDialTicks(payload);
         if (ticks === 0) return;
 
         try {
